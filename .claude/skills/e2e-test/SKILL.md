@@ -8,18 +8,37 @@ disable-model-invocation: true
 
 ## Pre-flight Check
 
-### 1. Platform Check
+### 1. Platform & Browser Check
 
-agent-browser requires **Linux, WSL, or macOS**. Check the platform:
+Check the platform:
 ```bash
 uname -s
 ```
-- `Linux` or `Darwin` → proceed
-- Anything else (e.g., `MINGW`, `CYGWIN`, or native Windows) → stop with:
 
-> "agent-browser only supports Linux, WSL, and macOS. It cannot run on native Windows. Please run this command from WSL or a Linux/macOS environment."
+**Platform-aware setup:**
 
-Stop execution if the platform is unsupported.
+- **Linux or Darwin (macOS):**
+  1. Install agent-browser if missing: `npm install -g agent-browser`
+  2. Install Chromium and system deps: `agent-browser install --with-deps`
+
+- **MINGW, CYGWIN, or native Windows:**
+  1. Install agent-browser if missing: `npm install -g agent-browser`
+  2. Install Chromium (no `--with-deps`): `agent-browser install`
+  3. **Start the daemon manually** — required due to [vercel-labs/agent-browser#522](https://github.com/vercel-labs/agent-browser/issues/522) where the Rust binary fails to create a Unix socket on Windows. The Node.js daemon falls back to TCP automatically:
+     ```bash
+     rm -f ~/.agent-browser/default.sock ~/.agent-browser/default.pid ~/.agent-browser/default.port
+     node "$(npm root -g)/agent-browser/dist/daemon.js" &
+     sleep 3
+     cat ~/.agent-browser/default.port  # Should show a TCP port number
+     ```
+
+Verify installation:
+```bash
+agent-browser --version
+```
+
+If installation fails, stop with:
+> "Failed to install agent-browser. Please install it manually with `npm install -g agent-browser`, then re-run this command."
 
 ### 2. Frontend Check
 
@@ -32,33 +51,6 @@ If no frontend is detected:
 > "This application doesn't appear to have a browser-accessible frontend. E2E browser testing requires a UI to visit. For backend-only or API testing, a different approach is needed."
 
 Stop execution if no frontend is found.
-
-### 3. agent-browser Installation
-
-Check if agent-browser is installed:
-```bash
-agent-browser --version
-```
-
-If the command is not found, install it automatically:
-```bash
-npm install -g agent-browser
-```
-
-After installation (or if it was already installed), ensure the browser engine is set up:
-```bash
-agent-browser install --with-deps
-```
-
-The `--with-deps` flag installs system-level Chromium dependencies on Linux/WSL. On macOS it is harmless.
-
-Verify installation succeeded:
-```bash
-agent-browser --version
-```
-
-If installation fails, stop with:
-> "Failed to install agent-browser. Please install it manually with `npm install -g agent-browser && agent-browser install --with-deps`, then re-run this command."
 
 ## Phase 1: Parallel Research
 
